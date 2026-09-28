@@ -28,6 +28,8 @@ interface GameStore {
   setCoins: (coins: number) => void;
   level: number;
   setLevel: (level: number) => void;
+  waterCapacity: number;
+  setWaterCapacity: (capacity: number) => void;
 
   // Inventory & tools
   inventory: InventoryItem[];
@@ -62,6 +64,8 @@ export const useGameStore = create<GameStore>((set) => ({
   setCoins: (coins) => set({ coins }),
   level: 1,
   setLevel: (level) => set({ level }),
+  waterCapacity: 0,
+  setWaterCapacity: (capacity) => set({ waterCapacity: capacity }),
 
   // Inventory & tools
   inventory: [],

@@ -12,6 +12,7 @@ export default function HUD() {
   const username = useGameStore((s) => s.username);
   const coins = useGameStore((s) => s.coins);
   const level = useGameStore((s) => s.level);
+  const waterCapacity = useGameStore((s) => s.waterCapacity);
   const tools = useGameStore((s) => s.tools);
   const activeHotbarSlot = useGameStore((s) => s.activeHotbarSlot);
   const inventory = useGameStore((s) => s.inventory);
@@ -35,10 +36,18 @@ export default function HUD() {
       </div>
 
       {/* Active Tool */}
-      <div className="bg-black/60 border-2 border-pixel-brown rounded px-2 py-1 flex items-center gap-1">
+      <div className="bg-black/60 border-2 border-pixel-brown rounded px-2 py-1 mb-1 flex items-center gap-1">
         <span>{toolIcon}</span>
         <span className="text-gray-300">{activeTool?.replace(/_/g, ' ')}</span>
       </div>
+
+      {/* Water Capacity (only when watering_can is active) */}
+      {activeTool === 'watering_can' && (
+        <div className="bg-black/60 border-2 border-blue-500 rounded px-2 py-1 flex items-center gap-1">
+          <span>💧</span>
+          <span className="text-blue-400">{waterCapacity}/5</span>
+        </div>
+      )}
     </div>
   );
 }

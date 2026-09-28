@@ -66,6 +66,7 @@ export class MainScene extends Phaser.Scene {
   private lastFacing: 'up' | 'down' | 'left' | 'right' = 'down';
   private tilledTileSprites: Map<string, Phaser.GameObjects.Image> = new Map();
   private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private waterMeterSprites: Map<string, Phaser.GameObjects.Graphics> = new Map();
 
   constructor() {
     super({ key: 'MainScene' });
@@ -172,9 +173,9 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    // Check if target is well
+    // Check if target is well → refill water
     if (targetX === WELL_POS.x && targetY === WELL_POS.y) {
-      useUiStore.getState().addNotification('Mengambil air dari sumur...', 'info');
+      this.refillWater();
       return;
     }
 
@@ -190,14 +191,24 @@ export class MainScene extends Phaser.Scene {
 
     // Check if tile has a crop
     const crops = useGameStore.getState().crops;
-    const hasCrop = crops.some((c) => c.position.x === targetX && c.position.y === targetY);
+    const crop = crops.find((c) => c.position.x === targetX && c.position.y === targetY);
 
-    if (hasCrop) {
-      useUiStore.getState().addNotification('Sudah ada tanaman di sini', 'info');
+    if (crop) {
+      // Check if player has watering_can active
+      const inventory = useGameStore.getState().inventory;
+      const activeSlot = useGameStore.getState().activeHotbarSlot;
+      const activeItem = inventory[activeSlot];
+
+      if (activeItem?.item_code === 'watering_can') {
+        // Water the crop
+        this.waterCrop(targetX, targetY);
+      } else {
+        useUiStore.getState().addNotification('Gunakan ember air untuk menyiram', 'info');
+      }
       return;
     }
 
-    // Check if player has seed in active hotbar
+    // No crop → check if player has seed in active hotbar
     const inventory = useGameStore.getState().inventory;
     const activeSlot = useGameStore.getState().activeHotbarSlot;
     const activeItem = inventory[activeSlot];
@@ -209,6 +220,52 @@ export class MainScene extends Phaser.Scene {
       // Open seed menu
       useUiStore.getState().setSeedMenuTile({ x: targetX, y: targetY });
       useUiStore.getState().setSeedMenuOpen(true);
+    }
+  }
+
+  private async refillWater(): Promise<void> {
+    try {
+      const response = await gameApi.refillWater();
+      const data = response.data;
+
+      if (data.success) {
+        useGameStore.getState().setWaterCapacity(data.data.water_capacity);
+        useUiStore.getState().addNotification(data.message, 'success');
+      } else {
+        useUiStore.getState().addNotification(data.message || 'Gagal mengisi air', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal mengisi air';
+      useUiStore.getState().addNotification(message, 'error');
+    }
+  }
+
+  private async waterCrop(tileX: number, tileY: number): Promise<void> {
+    try {
+      const response = await gameApi.water(tileX, tileY);
+      const data = response.data;
+
+      if (data.success) {
+        // Update water capacity
+        useGameStore.getState().setWaterCapacity(data.data.water_capacity);
+
+        // Update crop in store
+        const crops = useGameStore.getState().crops;
+        const updatedCrops = crops.map((c) => {
+          if (c.position.x === tileX && c.position.y === tileY) {
+            return { ...c, waterLevel: data.data.water_level };
+          }
+          return c;
+        });
+        useGameStore.getState().setCrops(updatedCrops);
+
+        useUiStore.getState().addNotification(data.message, 'success');
+      } else {
+        useUiStore.getState().addNotification(data.message || 'Gagal menyiram', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal menyiram tanaman';
+      useUiStore.getState().addNotification(message, 'error');
     }
   }
 
@@ -315,10 +372,12 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private onCropsChanged(crops: { id: string; type: string; position: { x: number; y: number }; growthStage: number }[]): void {
+  private onCropsChanged(crops: { id: string; type: string; position: { x: number; y: number }; growthStage: number; waterLevel?: number }[]): void {
     // Clear old sprites
     this.cropSprites.forEach((sprite) => sprite.destroy());
     this.cropSprites.clear();
+    this.waterMeterSprites.forEach((graphics) => graphics.destroy());
+    this.waterMeterSprites.clear();
 
     // Render crops based on stage
     for (const crop of crops) {
@@ -336,6 +395,33 @@ export class MainScene extends Phaser.Scene {
         .setDepth(1);
 
       this.cropSprites.set(`crop_${crop.position.x}_${crop.position.y}`, sprite);
+
+      // Draw water meter if water level < 100
+      if (crop.waterLevel !== undefined && crop.waterLevel < 100) {
+        const meterGraphics = this.add.graphics();
+        meterGraphics.setDepth(2);
+
+        // Background (gray)
+        meterGraphics.fillStyle(0x333333);
+        meterGraphics.fillRect(
+          crop.position.x * TILE_SIZE + 2,
+          crop.position.y * TILE_SIZE - 3,
+          12,
+          2
+        );
+
+        // Fill (blue)
+        const fillWidth = Math.max(0, (crop.waterLevel / 100) * 12);
+        meterGraphics.fillStyle(0x3388cc);
+        meterGraphics.fillRect(
+          crop.position.x * TILE_SIZE + 2,
+          crop.position.y * TILE_SIZE - 3,
+          fillWidth,
+          2
+        );
+
+        this.waterMeterSprites.set(`water_${crop.position.x}_${crop.position.y}`, meterGraphics);
+      }
     }
   }
 

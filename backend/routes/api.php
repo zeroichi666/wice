@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\GameController;
 use App\Http\Controllers\Api\V1\GameStateController;
 use App\Http\Controllers\Api\V1\PlantController;
 use App\Http\Controllers\Api\V1\TillController;
+use App\Http\Controllers\Api\V1\WaterController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -32,6 +33,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/till', [TillController::class, 'till']);
             Route::get('/tilled', [TillController::class, 'getTilledTiles']);
             Route::post('/plant', [PlantController::class, 'plant']);
+            Route::post('/refill-water', [WaterController::class, 'refillWater']);
+            Route::post('/water', [WaterController::class, 'water']);
         });
     });
 });
