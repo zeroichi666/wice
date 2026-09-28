@@ -1,0 +1,41 @@
+Implementasi sistem air:
+
+BACKEND — 2 endpoint:
+
+1. POST /api/v1/game/refill-water
+   - Validasi: user punya "watering_can"
+   - Aksi: set water_capacity user jadi MAX (5)
+   - Simpan di tabel users: water_capacity (integer, default 0)
+   
+2. POST /api/v1/game/water
+   Request: { tile_x, tile_y }
+   Validasi:
+   - User punya watering_can
+   - water_capacity >= 1
+   - Ada tanaman di tile (tile_x, tile_y)
+   - Tanaman belum stage 'ready'
+   Aksi:
+   - water_capacity -= 1
+   - update crops: water_level = 100, last_watered_at = now
+
+PENGURANGAN AIR OTOMATIS:
+- Di CropService, saat load state, hitung:
+  water_level = max(0, 100 - (elapsed_seconds_since_last_watered * 5))
+- Simpan ke DB setiap kali state di-load
+
+PERTUMBUHAN:
+- Tanaman hanya tumbuh jika water_level > 0
+- Jika water_level = 0, waktu tumbuh "pause" (perlu dihitung akumulatif)
+
+FRONTEND:
+- Saat interaksi dengan sumur (tekan E): panggil /refill-water, tampilkan notifikasi "Watering can penuh"
+- Saat interaksi dengan tanaman (tekan E dengan watering_can aktif): panggil /water
+- Visual: tile tanaman basah (warna lebih gelap) selama 30 detik terakhir disiram
+- Tampilkan meter air kecil di atas tanaman jika < 100%
+
+DELIVERABLE:
+- 2 endpoint backend
+- Migrasi kolom water_capacity di users
+- Update CropService untuk hitung water_level & growth pausing
+- Handler frontend (refill & water)
+- Visual basah + meter air

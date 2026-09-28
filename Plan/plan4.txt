@@ -1,0 +1,40 @@
+Buat endpoint untuk load state game saat pemain login:
+
+GET /api/v1/game/state  (auth required)
+Response:
+{
+  "success": true,
+  "data": {
+    "user": { "id", "username", "coins", "level" },
+    "inventory": [
+      { "item_code": "carrot_seed", "name": "Bibit Wortel", "quantity": 3 },
+      { "item_code": "hoe", "name": "Cangkul", "quantity": 1 }
+    ],
+    "tools": ["hoe", "watering_can"],  // shortcut list tools yang dimiliki
+    "crops": [
+      {
+        "tile_x": 5, "tile_y": 3,
+        "item_code": "carrot_seed",
+        "stage": "growing",
+        "water_level": 60,
+        "planted_at": "2025-01-01T10:00:00Z",
+        "time_to_ready": 15  // detik sisa, dihitung backend
+      }
+    ]
+  }
+}
+
+CATATAN PENTING:
+- Stage dan time_to_ready DIHITUNG di backend berdasarkan planted_at + growth_time
+- water_level juga dihitung dari last_watered_at (mis. berkurang 5% per detik)
+- Simpan hasil hitungan ke DB saat endpoint ini dipanggil (update stage & water_level aktual)
+
+GET /api/v1/game/world  (auth required)
+Response: data map (dimensi, layout tile, posisi sumur, posisi toko)
+- Untuk fase 1, map bisa statis (hardcode di backend atau file JSON)
+
+DELIVERABLE:
+- GameStateController dengan method state() dan world()
+- Service: CropService (hitung stage & water_level dari waktu)
+- Response format konsisten
+- Contoh response JSON di komentar

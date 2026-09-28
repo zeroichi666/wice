@@ -1,0 +1,36 @@
+Polish akhir fase 1:
+
+NOTIFIKASI TOAST:
+- Komponen <Toast /> di React
+- Queue notifikasi (maks 3 sekaligus)
+- Auto dismiss 3 detik
+- Animasi slide-in dari kanan
+- Icon sesuai tipe (sukses/error/info)
+
+SOUND EFFECT (opsional):
+- Gunakan Howler.js
+- SFX: tanam, siram, panen, beli, error, klik
+- BGM chiptune loop (dari OpenGameArt)
+- Volume control di settings
+
+AUTO-SYNC STATE:
+- TanStack Query refetch interval: 10 detik
+- Refetch saat window focus kembali
+- Refetch setelah aksi penting
+
+LOADING & ERROR STATE:
+- Skeleton/loading saat fetch pertama
+- Error boundary untuk crash React
+- Retry button jika fetch gagal
+
+SETTINGS PANEL (ESC):
+- Volume BGM & SFX
+- Toggle toolbar hints
+- Logout
+
+DELIVERABLE:
+- Toast system
+- Sound manager (opsional)
+- Auto-sync hook
+- Loading & error handling
+- Settings panel

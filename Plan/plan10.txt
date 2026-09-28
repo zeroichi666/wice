@@ -1,0 +1,33 @@
+Implementasi panen:
+
+BACKEND:
+POST /api/v1/game/harvest
+Request: { tile_x, tile_y }
+
+Validasi:
+1. User punya "harvest_basket" → else 422 "Kamu butuh Keranjang Panen"
+2. Ada tanaman di tile
+3. Stage tanaman = 'ready'
+
+Aksi:
+- Hapus crop dari tabel crops
+- Tambah hasil panen ke inventory (item_code = jenis crop, mis. "carrot")
+- Catat ke transactions
+- Return inventory yang di-update
+
+PERHITUNGAN STAGE 'READY':
+- Di CropService, hitung akumulasi waktu tumbuh (hanya saat water_level > 0)
+- Jika total_waktu_tumbuh >= growth_time → stage = 'ready'
+- Update DB saat dihitung
+
+FRONTEND:
+- Saat interaksi dengan tanaman stage 'ready' (tekan E): panggil /harvest
+- Animasi panen sederhana (plant menghilang + particle)
+- Update inventory
+- Notifikasi: "Berhasil panen 1 Wortel"
+
+DELIVERABLE:
+- Endpoint POST /harvest dengan HarvestService
+- Logika akumulasi waktu tumbuh di CropService (dengan water_level factor)
+- Handler frontend
+- Animasi panen

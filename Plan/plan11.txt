@@ -1,0 +1,30 @@
+Implementasi beli item di toko:
+
+BACKEND:
+GET /api/v1/shop/items
+Response: daftar semua items dengan type seed/tool + harga beli
+{ "items": [ { "code", "name", "type", "buy_price", "sprite_key" } ] }
+
+POST /api/v1/shop/buy
+Request: { item_code, quantity }
+Validasi:
+1. item_code valid & ada di items
+2. quantity >= 1
+3. user.coins >= buy_price * quantity
+Aksi:
+- user.coins -= total
+- Tambah ke inventory (atau increment jika sudah ada)
+- Insert ke transactions type='buy'
+- Return user.coins & inventory yang di-update
+
+Frontend:
+- Saat interaksi dengan toko (tekan E): buka ShopPanel
+- Tab "Beli": list item, harga, input quantity, tombol beli
+- Setelah beli: update state & tampilkan notifikasi
+- Disable tombol jika koin tidak cukup
+
+DELIVERABLE:
+- 2 endpoint backend
+- ShopService
+- ShopPanel React (tab Beli)
+- Integrasi state & notifikasi
