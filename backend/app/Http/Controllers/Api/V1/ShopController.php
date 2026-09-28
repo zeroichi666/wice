@@ -49,4 +49,28 @@ class ShopController extends Controller
 
         return $this->error($result['message'], 422);
     }
+
+    /**
+     * POST /api/v1/shop/sell
+     * Sell a crop item
+     */
+    public function sell(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_code' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $result = $this->shopService->sell(
+            $request->user(),
+            $validated['item_code'],
+            $validated['quantity']
+        );
+
+        if ($result['success']) {
+            return $this->success($result['message'], $result['data']);
+        }
+
+        return $this->error($result['message'], 422);
+    }
 }

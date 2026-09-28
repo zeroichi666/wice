@@ -124,50 +124,81 @@ export default function ShopPanel() {
     }
   };
 
-  const handleSell = (item: InventoryItem) => {
+  const handleSell = async (item: InventoryItem) => {
     const qty = quantities[item.item_code] || 1;
     if (item.quantity < qty) {
       addNotification('Tidak cukup!', 'error');
       return;
     }
 
-    const shopItem = shopItems.find((s) => s.code === item.item_code);
-    const sellPrice = shopItem?.sell_price || 0;
-    const total = sellPrice * qty;
+    setLoading(true);
+    try {
+      const response = await gameApi.sellItem(item.item_code, qty);
+      const data = response.data;
 
-    setCoins(coins + total);
+      if (data.success) {
+        // Update coins
+        setCoins(data.data.coins);
 
-    if (item.quantity <= qty) {
-      setInventory(inventory.filter((i) => i.item_code !== item.item_code));
-    } else {
-      setInventory(
-        inventory.map((i) =>
-          i.item_code === item.item_code ? { ...i, quantity: i.quantity - qty } : i
-        )
-      );
+        // Update inventory
+        if (item.quantity <= qty) {
+          setInventory(inventory.filter((i) => i.item_code !== item.item_code));
+        } else {
+          setInventory(
+            inventory.map((i) =>
+              i.item_code === item.item_code ? { ...i, quantity: i.quantity - qty } : i
+            )
+          );
+        }
+
+        addNotification(data.message, 'success');
+        setQuantities({ ...quantities, [item.item_code]: 1 });
+      } else {
+        addNotification(data.message || 'Gagal menjual', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal menjual item';
+      addNotification(message, 'error');
+    } finally {
+      setLoading(false);
     }
-
-    addNotification(`Menjual ${qty}x ${item.name} seharga 💰${total}`, 'success');
-    setQuantities({ ...quantities, [item.item_code]: 1 });
   };
 
-  const handleSellAll = () => {
+  const handleSellAll = async () => {
     const harvestItems = inventory.filter((i) => i.type === 'crop');
     if (harvestItems.length === 0) {
       addNotification('Tidak ada hasil panen untuk dijual!', 'error');
       return;
     }
 
-    let totalEarned = 0;
-    harvestItems.forEach((item) => {
-      const shopItem = shopItems.find((s) => s.code === item.item_code);
-      const sellPrice = shopItem?.sell_price || 0;
-      totalEarned += sellPrice * item.quantity;
-    });
+    setLoading(true);
+    try {
+      let totalEarned = 0;
+      let newInventory = [...inventory];
 
-    setCoins(coins + totalEarned);
-    setInventory(inventory.filter((i) => i.type !== 'crop'));
-    addNotification(`Menjual semua panen seharga 💰${totalEarned}`, 'success');
+      for (const item of harvestItems) {
+        const response = await gameApi.sellItem(item.item_code, item.quantity);
+        const data = response.data;
+
+        if (data.success) {
+          totalEarned += data.data.total_earnings;
+          newInventory = newInventory.filter((i) => i.item_code !== item.item_code);
+        }
+      }
+
+      // Reload coins from state
+      const lastResponse = await gameApi.getState();
+      if (lastResponse.data.success) {
+        setCoins(lastResponse.data.data.user?.coins || coins);
+      }
+
+      setInventory(newInventory);
+      addNotification(`Menjual semua panen seharga 💰${totalEarned}`, 'success');
+    } catch (error: any) {
+      addNotification('Gagal menjual beberapa item', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const harvestItems = inventory.filter((i) => i.type === 'crop');

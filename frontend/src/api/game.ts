@@ -31,6 +31,8 @@ export const gameApi = {
   getShopItems: () => apiClient.get('/shop/items'),
   buyItem: (item_code: string, quantity: number) =>
     apiClient.post('/shop/buy', { item_code, quantity }),
+  sellItem: (item_code: string, quantity: number) =>
+    apiClient.post('/shop/sell', { item_code, quantity }),
 };
 
 export default gameApi;

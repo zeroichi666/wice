@@ -43,5 +43,6 @@ Route::prefix('v1')->group(function () {
         // Shop
         Route::get('/shop/items', [ShopController::class, 'getItems']);
         Route::post('/shop/buy', [ShopController::class, 'buy']);
+        Route::post('/shop/sell', [ShopController::class, 'sell']);
     });
 });

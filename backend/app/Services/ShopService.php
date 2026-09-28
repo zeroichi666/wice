@@ -105,4 +105,81 @@ class ShopService
             ],
         ];
     }
+
+    /**
+     * Sell a crop item
+     */
+    public function sell(User $user, string $itemCode, int $quantity): array
+    {
+        // 1. Validate item exists and is a crop
+        $item = Item::where('item_code', $itemCode)
+            ->where('type', 'crop')
+            ->first();
+
+        if (!$item) {
+            return [
+                'success' => false,
+                'message' => 'Item tidak bisa dijual',
+                'error_code' => 'ITEM_NOT_SELLABLE',
+            ];
+        }
+
+        // 2. Validate quantity
+        if ($quantity < 1) {
+            return [
+                'success' => false,
+                'message' => 'Jumlah minimal 1',
+                'error_code' => 'INVALID_QUANTITY',
+            ];
+        }
+
+        // 3. Check if user has enough in inventory
+        $inventory = Inventory::where('user_id', $user->id)
+            ->where('item_id', $item->id)
+            ->first();
+
+        if (!$inventory || $inventory->quantity < $quantity) {
+            return [
+                'success' => false,
+                'message' => 'Inventory tidak cukup',
+                'error_code' => 'INSUFFICIENT_INVENTORY',
+            ];
+        }
+
+        // 4. Calculate earnings
+        $totalEarnings = $item->sell_price * $quantity;
+
+        // 5. Deduct from inventory
+        $inventory->quantity -= $quantity;
+        if ($inventory->quantity <= 0) {
+            $inventory->delete();
+        } else {
+            $inventory->save();
+        }
+
+        // 6. Add coins
+        $user->coins += $totalEarnings;
+        $user->save();
+
+        // 7. Record transaction
+        Transaction::create([
+            'user_id' => $user->id,
+            'item_id' => $item->id,
+            'type' => 'sell',
+            'quantity' => $quantity,
+            'price' => $item->sell_price,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Berhasil menjual ' . $quantity . 'x ' . $item->name . ' seharga 💰' . $totalEarnings,
+            'data' => [
+                'coins' => $user->coins,
+                'item_code' => $item->item_code,
+                'item_name' => $item->name,
+                'quantity' => $quantity,
+                'total_earnings' => $totalEarnings,
+            ],
+        ];
+    }
 }
