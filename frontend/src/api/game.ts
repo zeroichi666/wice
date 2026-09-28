@@ -26,6 +26,11 @@ export const gameApi = {
   // Harvest
   harvest: (tile_x: number, tile_y: number) =>
     apiClient.post('/game/harvest', { tile_x, tile_y }),
+
+  // Shop
+  getShopItems: () => apiClient.get('/shop/items'),
+  buyItem: (item_code: string, quantity: number) =>
+    apiClient.post('/shop/buy', { item_code, quantity }),
 };
 
 export default gameApi;

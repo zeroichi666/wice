@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\GameController;
 use App\Http\Controllers\Api\V1\GameStateController;
 use App\Http\Controllers\Api\V1\HarvestController;
 use App\Http\Controllers\Api\V1\PlantController;
+use App\Http\Controllers\Api\V1\ShopController;
 use App\Http\Controllers\Api\V1\TillController;
 use App\Http\Controllers\Api\V1\WaterController;
 use Illuminate\Support\Facades\Route;
@@ -38,5 +39,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/water', [WaterController::class, 'water']);
             Route::post('/harvest', [HarvestController::class, 'harvest']);
         });
+
+        // Shop
+        Route::get('/shop/items', [ShopController::class, 'getItems']);
+        Route::post('/shop/buy', [ShopController::class, 'buy']);
     });
 });

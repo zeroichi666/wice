@@ -1,15 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../stores/gameStore';
 import { useUiStore } from '../stores/uiStore';
+import gameApi from '../api/game';
 import type { InventoryItem } from '../types';
 
-const shopItems: { item_code: string; name: string; type: 'seed' | 'crop'; buy_price: number; sell_price: number; icon: string }[] = [
-  { item_code: 'carrot_seed', name: 'Carrot Seed', type: 'seed', buy_price: 10, sell_price: 5, icon: '🥕' },
-  { item_code: 'potato_seed', name: 'Potato Seed', type: 'seed', buy_price: 15, sell_price: 8, icon: '🥔' },
-  { item_code: 'tomato_seed', name: 'Tomato Seed', type: 'seed', buy_price: 20, sell_price: 10, icon: '🍅' },
-  { item_code: 'wheat_seed', name: 'Wheat Seed', type: 'seed', buy_price: 5, sell_price: 3, icon: '🌾' },
-  { item_code: 'corn_seed', name: 'Corn Seed', type: 'seed', buy_price: 25, sell_price: 12, icon: '🌽' },
-];
+const itemIcons: Record<string, string> = {
+  carrot_seed: '🥕',
+  potato_seed: '🥔',
+  tomato_seed: '🍅',
+  wheat_seed: '🌾',
+  corn_seed: '🌽',
+  hoe: '🪓',
+  watering_can: '💧',
+  harvest_basket: '🧺',
+  carrot: '🥕',
+  potato: '🥔',
+  tomato: '🍅',
+  wheat: '🌾',
+  corn: '🌽',
+};
+
+interface ShopItem {
+  code: string;
+  name: string;
+  type: 'seed' | 'tool';
+  buy_price: number;
+  sell_price: number;
+}
 
 export default function ShopPanel() {
   const isShopOpen = useUiStore((s) => s.isShopOpen);
@@ -21,7 +38,16 @@ export default function ShopPanel() {
   const setCoins = useGameStore((s) => s.setCoins);
   const inventory = useGameStore((s) => s.inventory);
   const setInventory = useGameStore((s) => s.setInventory);
+  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(false);
+
+  // Load shop items when panel opens
+  useEffect(() => {
+    if (isShopOpen) {
+      loadShopItems();
+    }
+  }, [isShopOpen]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -33,10 +59,21 @@ export default function ShopPanel() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isShopOpen, toggleShop]);
 
+  const loadShopItems = async () => {
+    try {
+      const response = await gameApi.getShopItems();
+      if (response.data.success) {
+        setShopItems(response.data.data);
+      }
+    } catch (error) {
+      addNotification('Gagal memuat data toko', 'error');
+    }
+  };
+
   if (!isShopOpen) return null;
 
-  const handleBuy = (item: typeof shopItems[0]) => {
-    const qty = quantities[item.item_code] || 1;
+  const handleBuy = async (item: ShopItem) => {
+    const qty = quantities[item.code] || 1;
     const totalCost = item.buy_price * qty;
 
     if (coins < totalCost) {
@@ -44,31 +81,47 @@ export default function ShopPanel() {
       return;
     }
 
-    setCoins(coins - totalCost);
+    setLoading(true);
+    try {
+      const response = await gameApi.buyItem(item.code, qty);
+      const data = response.data;
 
-    // Update inventory
-    const existing = inventory.find((i) => i.item_code === item.item_code);
-    if (existing) {
-      setInventory(
-        inventory.map((i) =>
-          i.item_code === item.item_code ? { ...i, quantity: i.quantity + qty } : i
-        )
-      );
-    } else {
-      const newItem: InventoryItem = {
-        id: Date.now().toString(),
-        item_code: item.item_code,
-        name: item.name,
-        quantity: qty,
-        type: item.type,
-        buy_price: item.buy_price,
-        sell_price: item.sell_price,
-      };
-      setInventory([...inventory, newItem]);
+      if (data.success) {
+        // Update coins
+        setCoins(data.data.coins);
+
+        // Update inventory
+        const existing = inventory.find((i) => i.item_code === item.code);
+        if (existing) {
+          setInventory(
+            inventory.map((i) =>
+              i.item_code === item.code ? { ...i, quantity: i.quantity + qty } : i
+            )
+          );
+        } else {
+          const newItem: InventoryItem = {
+            id: Date.now().toString(),
+            item_code: item.code,
+            name: item.name,
+            quantity: qty,
+            type: item.type,
+            buy_price: item.buy_price,
+            sell_price: item.sell_price,
+          };
+          setInventory([...inventory, newItem]);
+        }
+
+        addNotification(data.message, 'success');
+        setQuantities({ ...quantities, [item.code]: 1 });
+      } else {
+        addNotification(data.message || 'Gagal membeli', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal membeli item';
+      addNotification(message, 'error');
+    } finally {
+      setLoading(false);
     }
-
-    addNotification(`Membeli ${qty}x ${item.name}`, 'success');
-    setQuantities({ ...quantities, [item.item_code]: 1 });
   };
 
   const handleSell = (item: InventoryItem) => {
@@ -78,7 +131,8 @@ export default function ShopPanel() {
       return;
     }
 
-    const sellPrice = shopItems.find((s) => s.item_code === item.item_code)?.sell_price || 0;
+    const shopItem = shopItems.find((s) => s.code === item.item_code);
+    const sellPrice = shopItem?.sell_price || 0;
     const total = sellPrice * qty;
 
     setCoins(coins + total);
@@ -105,15 +159,14 @@ export default function ShopPanel() {
     }
 
     let totalEarned = 0;
-    const newInventory = [...inventory];
-
     harvestItems.forEach((item) => {
-      const sellPrice = shopItems.find((s) => s.item_code === item.item_code)?.sell_price || 0;
+      const shopItem = shopItems.find((s) => s.code === item.item_code);
+      const sellPrice = shopItem?.sell_price || 0;
       totalEarned += sellPrice * item.quantity;
     });
 
     setCoins(coins + totalEarned);
-    setInventory(newInventory.filter((i) => i.type !== 'crop'));
+    setInventory(inventory.filter((i) => i.type !== 'crop'));
     addNotification(`Menjual semua panen seharga 💰${totalEarned}`, 'success');
   };
 
@@ -165,27 +218,29 @@ export default function ShopPanel() {
           {shopTab === 'buy' ? (
             <div className="flex flex-col gap-1">
               {shopItems.map((item) => {
-                const qty = quantities[item.item_code] || 1;
+                const qty = quantities[item.code] || 1;
+                const totalCost = item.buy_price * qty;
+                const canAfford = coins >= totalCost;
                 return (
                   <div
-                    key={item.item_code}
+                    key={item.code}
                     className="flex items-center gap-2 bg-black/50 border border-gray-700 rounded p-2"
                   >
-                    <span className="text-lg">{item.icon}</span>
+                    <span className="text-lg">{itemIcons[item.code] || '📦'}</span>
                     <div className="flex-1">
                       <div className="text-[8px] text-white">{item.name}</div>
                       <div className="text-[7px] text-yellow-400">💰 {item.buy_price}/pcs</div>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setQuantities({ ...quantities, [item.item_code]: Math.max(1, qty - 1) })}
+                        onClick={() => setQuantities({ ...quantities, [item.code]: Math.max(1, qty - 1) })}
                         className="w-5 h-5 bg-gray-700 hover:bg-gray-600 rounded text-[8px] text-white"
                       >
                         -
                       </button>
                       <span className="text-[8px] text-white w-4 text-center">{qty}</span>
                       <button
-                        onClick={() => setQuantities({ ...quantities, [item.item_code]: qty + 1 })}
+                        onClick={() => setQuantities({ ...quantities, [item.code]: qty + 1 })}
                         className="w-5 h-5 bg-gray-700 hover:bg-gray-600 rounded text-[8px] text-white"
                       >
                         +
@@ -193,9 +248,14 @@ export default function ShopPanel() {
                     </div>
                     <button
                       onClick={() => handleBuy(item)}
-                      className="bg-green-700 hover:bg-green-600 text-white text-[7px] px-2 py-1 rounded"
+                      disabled={loading || !canAfford}
+                      className={`text-[7px] px-2 py-1 rounded ${
+                        canAfford && !loading
+                          ? 'bg-green-700 hover:bg-green-600 text-white'
+                          : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      }`}
                     >
-                      Beli
+                      {loading ? '...' : 'Beli'}
                     </button>
                   </div>
                 );
@@ -211,15 +271,14 @@ export default function ShopPanel() {
                 <div className="flex flex-col gap-1">
                   {harvestItems.map((item) => {
                     const qty = quantities[item.item_code] || 1;
-                    const sellPrice = shopItems.find((s) => s.item_code === item.item_code)?.sell_price || 0;
+                    const shopItem = shopItems.find((s) => s.code === item.item_code);
+                    const sellPrice = shopItem?.sell_price || 0;
                     return (
                       <div
                         key={item.item_code}
                         className="flex items-center gap-2 bg-black/50 border border-gray-700 rounded p-2"
                       >
-                        <span className="text-lg">
-                          {shopItems.find((s) => s.item_code === item.item_code)?.icon || '📦'}
-                        </span>
+                        <span className="text-lg">{itemIcons[item.item_code] || '📦'}</span>
                         <div className="flex-1">
                           <div className="text-[8px] text-white">{item.name}</div>
                           <div className="text-[7px] text-yellow-400">
