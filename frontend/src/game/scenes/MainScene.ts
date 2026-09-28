@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE, MAP_COLS, MAP_ROWS } from '../../config';
 import { Player } from '../entities/Player';
 import { useGameStore } from '../../stores/gameStore';
+import { useUiStore } from '../../stores/uiStore';
+import gameApi from '../../api/game';
 
 // 0=grass 1=dirt 2=path
 const BASE_MAP: number[][] = (() => {
@@ -58,9 +60,11 @@ export class MainScene extends Phaser.Scene {
   private player!: Player;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<string, Phaser.Input.Keyboard.Key>;
+  private interactKey!: Phaser.Input.Keyboard.Key;
   private lastTileX = -1;
   private lastTileY = -1;
   private lastFacing: 'up' | 'down' | 'left' | 'right' = 'down';
+  private tilledTileSprites: Map<string, Phaser.GameObjects.Image> = new Map();
 
   constructor() {
     super({ key: 'MainScene' });
@@ -86,6 +90,9 @@ export class MainScene extends Phaser.Scene {
     // Crops from store
     this.renderCrops();
 
+    // Tilled tiles from store
+    this.renderTilledTiles();
+
     // Player at center of map on the path
     this.player = new Player(this, 15 * TILE_SIZE, 9 * TILE_SIZE);
 
@@ -101,9 +108,18 @@ export class MainScene extends Phaser.Scene {
     // Input
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.wasd = this.input.keyboard!.addKeys('W,A,S,D') as unknown as Record<string, Phaser.Input.Keyboard.Key>;
+    this.interactKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
     // Set initial game state
     useGameStore.getState().setGameState('playing');
+
+    // Subscribe to tilled tiles changes
+    useGameStore.subscribe((state) => {
+      this.onTilledTilesChanged(state.tilledTiles);
+    });
+
+    // Load initial tilled tiles from API
+    this.loadTilledTiles();
   }
 
   update(): void {
@@ -120,6 +136,96 @@ export class MainScene extends Phaser.Scene {
         tile_y: pos.tile_y,
         facing: this.player.facing,
       });
+    }
+
+    // Handle E key interaction
+    if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.handleInteract();
+    }
+  }
+
+  private async handleInteract(): Promise<void> {
+    const pos = this.player.getTilePosition();
+    const facing = this.player.facing;
+
+    // Calculate tile in front of player
+    let targetX = pos.tile_x;
+    let targetY = pos.tile_y;
+
+    switch (facing) {
+      case 'up': targetY--; break;
+      case 'down': targetY++; break;
+      case 'left': targetX--; break;
+      case 'right': targetX++; break;
+    }
+
+    // Check if target is shop
+    if (targetX === SHOP_POS.x && targetY === SHOP_POS.y) {
+      useUiStore.getState().toggleShop();
+      return;
+    }
+
+    // Check if target is well
+    if (targetX === WELL_POS.x && targetY === WELL_POS.y) {
+      useUiStore.getState().addNotification('Mengambil air dari sumur...', 'info');
+      return;
+    }
+
+    // Try to till the soil
+    await this.tillTile(targetX, targetY);
+  }
+
+  private async tillTile(tileX: number, tileY: number): Promise<void> {
+    try {
+      const response = await gameApi.till(tileX, tileY);
+      const data = response.data;
+
+      if (data.success) {
+        // Add tilled tile to store
+        useGameStore.getState().addTilledTile({
+          tile_x: tileX,
+          tile_y: tileY,
+          tilled_at: data.data.tilled_at,
+        });
+
+        useUiStore.getState().addNotification('Berhasil mencangkul tanah', 'success');
+      } else {
+        useUiStore.getState().addNotification(data.message || 'Gagal mencangkul', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal mencangkul tanah';
+      useUiStore.getState().addNotification(message, 'error');
+    }
+  }
+
+  private async loadTilledTiles(): Promise<void> {
+    try {
+      const response = await gameApi.getTilledTiles();
+      if (response.data.success) {
+        useGameStore.getState().setTilledTiles(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to load tilled tiles:', error);
+    }
+  }
+
+  private onTilledTilesChanged(tilledTiles: { tile_x: number; tile_y: number; tilled_at: string }[]): void {
+    // Clear old sprites
+    this.tilledTileSprites.forEach((sprite) => sprite.destroy());
+    this.tilledTileSprites.clear();
+
+    // Render new tilled tiles
+    for (const tile of tilledTiles) {
+      const key = `tilled_${tile.tile_x}_${tile.tile_y}`;
+      const sprite = this.add.image(
+        tile.tile_x * TILE_SIZE,
+        tile.tile_y * TILE_SIZE,
+        'tile_tilled'
+      )
+        .setOrigin(0, 0)
+        .setDepth(0);
+
+      this.tilledTileSprites.set(key, sprite);
     }
   }
 
@@ -148,6 +254,22 @@ export class MainScene extends Phaser.Scene {
       )
         .setOrigin(0, 0)
         .setDepth(1);
+    }
+  }
+
+  private renderTilledTiles(): void {
+    const tilledTiles = useGameStore.getState().tilledTiles;
+    for (const tile of tilledTiles) {
+      const key = `tilled_${tile.tile_x}_${tile.tile_y}`;
+      const sprite = this.add.image(
+        tile.tile_x * TILE_SIZE,
+        tile.tile_y * TILE_SIZE,
+        'tile_tilled'
+      )
+        .setOrigin(0, 0)
+        .setDepth(0);
+
+      this.tilledTileSprites.set(key, sprite);
     }
   }
 }

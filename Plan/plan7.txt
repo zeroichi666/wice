@@ -1,0 +1,36 @@
+Implementasi aksi mencangkul tanah (till):
+
+BACKEND:
+POST /api/v1/game/till
+Request: { tile_x, tile_y }
+
+Validasi:
+1. User punya tool "hoe" di inventory → else 422 "Kamu butuh Cangkul"
+2. Tile dalam batas map
+3. Tile adalah "tanah" yang bisa di-till (bukan jalan/sumur/toko)
+4. Tile belum di-till sebelumnya
+
+Aksi:
+- Tandai tile sebagai tilled (simpan di tabel baru: tilled_tiles)
+  * Migration: tilled_tiles (id, user_id, tile_x, tile_y, tilled_at)
+- Return state tile yang di-update
+
+FRONTEND:
+- Saat pemain tekan E di depan tile:
+  1. Cek apakah tile bisa di-till (via API state atau cache)
+  2. Kirim POST /till
+  3. Jika sukses: update tampilan tile jadi coklat gelap (tilled)
+  4. Jika gagal: tampilkan notifikasi error
+- Animasi cangkul sederhana (player bobbing + sound effect nanti)
+
+INTEGRASI PHASER:
+- Phaser kirim event ke React: "player_interact" dengan tile_x, tile_y, facing
+- React panggil API, update Zustand store
+- Phaser baca store → render tile tilled
+
+DELIVERABLE:
+- Endpoint POST /till dengan TillService
+- Migrasi tilled_tiles
+- Handler interaksi di frontend
+- Visual tile tilled
+- Notifikasi sukses/gagal

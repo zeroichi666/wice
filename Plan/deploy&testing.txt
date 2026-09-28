@@ -1,0 +1,33 @@
+Setup deploy & testing:
+
+TESTING BACKEND:
+- Feature test untuk setiap endpoint:
+  * Auth (register, login, logout)
+  * Till (validasi tool, tile)
+  * Plant (validasi seed, tile tilled)
+  * Water (validasi watering can, capacity)
+  * Harvest (validasi basket, stage ready)
+  * Buy/Sell (validasi koin, quantity)
+- Jalankan dengan `php artisan test`
+
+TESTING FRONTEND:
+- Unit test store Zustand
+- Test API client dengan MSW (Mock Service Worker)
+- Manual testing checklist
+
+DEPLOY:
+Backend (contoh Laravel Forge / VPS):
+- .env production
+- Optimize: php artisan config:cache, route:cache
+- Queue worker untuk background task
+- HTTPS
+
+Frontend (contoh Vercel / Netlify):
+- Build: npm run build
+- Set VITE_API_URL ke domain backend
+
+DELIVERABLE:
+- File test lengkap
+- .env.example untuk production
+- Script deploy (bash atau dokumentasi step-by-step)
+- Checklist manual testing

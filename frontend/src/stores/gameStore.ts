@@ -36,6 +36,11 @@ interface GameStore {
   setTools: (tools: string[]) => void;
   activeHotbarSlot: number;
   setActiveHotbarSlot: (slot: number) => void;
+
+  // Tilled tiles
+  tilledTiles: { tile_x: number; tile_y: number; tilled_at: string }[];
+  setTilledTiles: (tiles: { tile_x: number; tile_y: number; tilled_at: string }[]) => void;
+  addTilledTile: (tile: { tile_x: number; tile_y: number; tilled_at: string }) => void;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -65,4 +70,9 @@ export const useGameStore = create<GameStore>((set) => ({
   setTools: (tools) => set({ tools }),
   activeHotbarSlot: 0,
   setActiveHotbarSlot: (slot) => set({ activeHotbarSlot: slot }),
+
+  // Tilled tiles
+  tilledTiles: [],
+  setTilledTiles: (tiles) => set({ tilledTiles: tiles }),
+  addTilledTile: (tile) => set((s) => ({ tilledTiles: [...s.tilledTiles, tile] })),
 }));

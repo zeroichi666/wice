@@ -47,6 +47,22 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(9, 11, 3, 3);
     g.generateTexture('tile_path', 16, 16);
 
+    // Tilled tile (dark brown soil)
+    g.clear();
+    g.fillStyle(0x5c4033);
+    g.fillRect(0, 0, 16, 16);
+    g.fillStyle(0x4a3228);
+    g.fillRect(1, 1, 3, 3);
+    g.fillRect(7, 5, 3, 3);
+    g.fillRect(3, 11, 3, 3);
+    g.fillRect(11, 9, 3, 3);
+    // Tilled lines
+    g.fillStyle(0x3d2820);
+    g.fillRect(0, 4, 16, 1);
+    g.fillRect(0, 8, 16, 1);
+    g.fillRect(0, 12, 16, 1);
+    g.generateTexture('tile_tilled', 16, 16);
+
     g.destroy();
   }
 

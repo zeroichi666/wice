@@ -1,0 +1,24 @@
+Implementasi jual hasil panen di toko:
+
+BACKEND:
+POST /api/v1/shop/sell
+Request: { item_code, quantity }
+Validasi:
+1. item_code valid & ada di items dengan type='crop'
+2. quantity >= 1
+3. User punya quantity di inventory
+Aksi:
+- Kurangi inventory
+- user.coins += sell_price * quantity
+- Insert transactions type='sell'
+- Return user.coins & inventory
+
+Frontend:
+- ShopPanel tab "Jual": list crop di inventory + sell_price + tombol jual
+- Tombol "Jual Semua" untuk jual semua crop sekaligus
+- Update state & notifikasi
+
+DELIVERABLE:
+- Endpoint POST /shop/sell
+- ShopService method sell()
+- ShopPanel tab Jual

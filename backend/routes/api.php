@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GameController;
 use App\Http\Controllers\Api\V1\GameStateController;
+use App\Http\Controllers\Api\V1\TillController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -27,6 +28,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/action', [GameController::class, 'action']);
             Route::get('/status', [GameController::class, 'status']);
             Route::post('/sync', [GameController::class, 'sync']);
+            Route::post('/till', [TillController::class, 'till']);
+            Route::get('/tilled', [TillController::class, 'getTilledTiles']);
         });
     });
 });
