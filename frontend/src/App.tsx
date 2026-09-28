@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import GameCanvas from './game/GameCanvas';
-import { HUD, Hotbar, InventoryPanel, ShopPanel, SeedMenu, ToastNotifications } from './ui';
+import { HUD, Hotbar, InventoryPanel, ShopPanel, SeedMenu, SettingsPanel, ToastNotifications } from './ui';
 import { useUiStore } from './stores/uiStore';
 import { useGameStore } from './stores/gameStore';
+import useAutoSync from './hooks/useAutoSync';
 import gameApi from './api/game';
 
 function App() {
@@ -11,6 +12,25 @@ function App() {
   const setSeedMenuOpen = useUiStore((s) => s.setSeedMenuOpen);
   const setSeedMenuTile = useUiStore((s) => s.setSeedMenuTile);
   const addNotification = useUiStore((s) => s.addNotification);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const gameState = useGameStore((s) => s.gameState);
+
+  // Auto-sync game state
+  useAutoSync();
+
+  // ESC to open settings (when no other panel is open)
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && gameState === 'playing') {
+        const uiState = useUiStore.getState();
+        if (!uiState.isInventoryOpen && !uiState.isShopOpen && !uiState.isSeedMenuOpen) {
+          setSettingsOpen(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [gameState, setSettingsOpen]);
 
   const handleSeedSelect = useCallback(async (seedCode: string) => {
     if (!seedMenuTile) return;
@@ -71,6 +91,7 @@ function App() {
       {isSeedMenuOpen && (
         <SeedMenu onSelect={handleSeedSelect} onCancel={handleSeedCancel} />
       )}
+      <SettingsPanel />
       <ToastNotifications />
     </div>
   );

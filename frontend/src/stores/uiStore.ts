@@ -18,6 +18,9 @@ interface UiStore {
   seedMenuTile: { x: number; y: number } | null;
   setSeedMenuTile: (tile: { x: number; y: number } | null) => void;
 
+  isSettingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
+
   notifications: Notification[];
   addNotification: (message: string, type: Notification['type']) => void;
   removeNotification: (id: string) => void;
@@ -39,6 +42,9 @@ export const useUiStore = create<UiStore>((set) => ({
   setSeedMenuOpen: (open) => set({ isSeedMenuOpen: open }),
   seedMenuTile: null,
   setSeedMenuTile: (tile) => set({ seedMenuTile: tile }),
+
+  isSettingsOpen: false,
+  setSettingsOpen: (open) => set({ isSettingsOpen: open }),
 
   notifications: [],
   addNotification: (message, type) => {
