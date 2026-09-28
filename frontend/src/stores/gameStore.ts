@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GameState, Crop } from '../types';
+import type { GameState, Crop, InventoryItem } from '../types';
 
 export type FacingDirection = 'up' | 'down' | 'left' | 'right';
 
@@ -20,6 +20,22 @@ interface GameStore {
   setPlayerPosition: (pos: PlayerPosition) => void;
   crops: Crop[];
   setCrops: (crops: Crop[]) => void;
+
+  // Player data
+  username: string;
+  setUsername: (name: string) => void;
+  coins: number;
+  setCoins: (coins: number) => void;
+  level: number;
+  setLevel: (level: number) => void;
+
+  // Inventory & tools
+  inventory: InventoryItem[];
+  setInventory: (items: InventoryItem[]) => void;
+  tools: string[];
+  setTools: (tools: string[]) => void;
+  activeHotbarSlot: number;
+  setActiveHotbarSlot: (slot: number) => void;
 }
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -33,4 +49,20 @@ export const useGameStore = create<GameStore>((set) => ({
   setPlayerPosition: (pos) => set({ playerPosition: pos }),
   crops: [],
   setCrops: (crops) => set({ crops }),
+
+  // Player data
+  username: 'Farmer',
+  setUsername: (name) => set({ username: name }),
+  coins: 100,
+  setCoins: (coins) => set({ coins }),
+  level: 1,
+  setLevel: (level) => set({ level }),
+
+  // Inventory & tools
+  inventory: [],
+  setInventory: (items) => set({ inventory: items }),
+  tools: ['hoe', 'watering_can'],
+  setTools: (tools) => set({ tools }),
+  activeHotbarSlot: 0,
+  setActiveHotbarSlot: (slot) => set({ activeHotbarSlot: slot }),
 }));

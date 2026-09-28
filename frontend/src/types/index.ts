@@ -23,7 +23,17 @@ export interface Crop {
 
 export interface InventoryItem {
   id: string;
+  item_code: string;
   name: string;
   quantity: number;
   type: 'seed' | 'tool' | 'crop' | 'currency';
+  buy_price?: number;
+  sell_price?: number;
+}
+
+export interface Notification {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+  timestamp: number;
 }
