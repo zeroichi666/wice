@@ -194,6 +194,12 @@ export class MainScene extends Phaser.Scene {
     const crop = crops.find((c) => c.position.x === targetX && c.position.y === targetY);
 
     if (crop) {
+      // Check if crop is ready → harvest
+      if (crop.growthStage >= 3) {
+        this.harvestCrop(targetX, targetY);
+        return;
+      }
+
       // Check if player has watering_can active
       const inventory = useGameStore.getState().inventory;
       const activeSlot = useGameStore.getState().activeHotbarSlot;
@@ -265,6 +271,54 @@ export class MainScene extends Phaser.Scene {
       }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Gagal menyiram tanaman';
+      useUiStore.getState().addNotification(message, 'error');
+    }
+  }
+
+  private async harvestCrop(tileX: number, tileY: number): Promise<void> {
+    try {
+      const response = await gameApi.harvest(tileX, tileY);
+      const data = response.data;
+
+      if (data.success) {
+        // Remove crop from store
+        const crops = useGameStore.getState().crops;
+        const updatedCrops = crops.filter(
+          (c) => !(c.position.x === tileX && c.position.y === tileY)
+        );
+        useGameStore.getState().setCrops(updatedCrops);
+
+        // Add harvested item to inventory
+        const inventory = useGameStore.getState().inventory;
+        const existingItem = inventory.find((i) => i.item_code === data.data.product_code);
+
+        if (existingItem) {
+          useGameStore.getState().setInventory(
+            inventory.map((i) =>
+              i.item_code === data.data.product_code
+                ? { ...i, quantity: i.quantity + 1 }
+                : i
+            )
+          );
+        } else {
+          useGameStore.getState().setInventory([
+            ...inventory,
+            {
+              id: String(Date.now()),
+              item_code: data.data.product_code,
+              name: data.data.product_name,
+              quantity: 1,
+              type: 'crop',
+            },
+          ]);
+        }
+
+        useUiStore.getState().addNotification(data.message, 'success');
+      } else {
+        useUiStore.getState().addNotification(data.message || 'Gagal panen', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal panen';
       useUiStore.getState().addNotification(message, 'error');
     }
   }

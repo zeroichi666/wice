@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GameController;
 use App\Http\Controllers\Api\V1\GameStateController;
+use App\Http\Controllers\Api\V1\HarvestController;
 use App\Http\Controllers\Api\V1\PlantController;
 use App\Http\Controllers\Api\V1\TillController;
 use App\Http\Controllers\Api\V1\WaterController;
@@ -35,6 +36,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/plant', [PlantController::class, 'plant']);
             Route::post('/refill-water', [WaterController::class, 'refillWater']);
             Route::post('/water', [WaterController::class, 'water']);
+            Route::post('/harvest', [HarvestController::class, 'harvest']);
         });
     });
 });

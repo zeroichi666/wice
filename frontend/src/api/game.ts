@@ -22,6 +22,10 @@ export const gameApi = {
   refillWater: () => apiClient.post('/game/refill-water'),
   water: (tile_x: number, tile_y: number) =>
     apiClient.post('/game/water', { tile_x, tile_y }),
+
+  // Harvest
+  harvest: (tile_x: number, tile_y: number) =>
+    apiClient.post('/game/harvest', { tile_x, tile_y }),
 };
 
 export default gameApi;
