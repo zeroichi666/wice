@@ -38,3 +38,4 @@ frontend/.vite/
 
 # Phaser build artifacts
 *.map
+Plan/
