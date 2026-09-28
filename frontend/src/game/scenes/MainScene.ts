@@ -65,6 +65,7 @@ export class MainScene extends Phaser.Scene {
   private lastTileY = -1;
   private lastFacing: 'up' | 'down' | 'left' | 'right' = 'down';
   private tilledTileSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  private cropSprites: Map<string, Phaser.GameObjects.Image> = new Map();
 
   constructor() {
     super({ key: 'MainScene' });
@@ -118,8 +119,14 @@ export class MainScene extends Phaser.Scene {
       this.onTilledTilesChanged(state.tilledTiles);
     });
 
-    // Load initial tilled tiles from API
+    // Subscribe to crops changes
+    useGameStore.subscribe((state) => {
+      this.onCropsChanged(state.crops);
+    });
+
+    // Load initial data from API
     this.loadTilledTiles();
+    this.loadCrops();
   }
 
   update(): void {
@@ -144,7 +151,7 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
-  private async handleInteract(): Promise<void> {
+  private handleInteract(): void {
     const pos = this.player.getTilePosition();
     const facing = this.player.facing;
 
@@ -171,8 +178,38 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    // Try to till the soil
-    await this.tillTile(targetX, targetY);
+    // Check if tile is tilled
+    const tilledTiles = useGameStore.getState().tilledTiles;
+    const isTilled = tilledTiles.some((t) => t.tile_x === targetX && t.tile_y === targetY);
+
+    if (!isTilled) {
+      // Try to till the soil
+      this.tillTile(targetX, targetY);
+      return;
+    }
+
+    // Check if tile has a crop
+    const crops = useGameStore.getState().crops;
+    const hasCrop = crops.some((c) => c.position.x === targetX && c.position.y === targetY);
+
+    if (hasCrop) {
+      useUiStore.getState().addNotification('Sudah ada tanaman di sini', 'info');
+      return;
+    }
+
+    // Check if player has seed in active hotbar
+    const inventory = useGameStore.getState().inventory;
+    const activeSlot = useGameStore.getState().activeHotbarSlot;
+    const activeItem = inventory[activeSlot];
+
+    if (activeItem && activeItem.type === 'seed' && activeItem.quantity > 0) {
+      // Plant directly with hotbar seed
+      this.plantSeed(targetX, targetY, activeItem.item_code);
+    } else {
+      // Open seed menu
+      useUiStore.getState().setSeedMenuTile({ x: targetX, y: targetY });
+      useUiStore.getState().setSeedMenuOpen(true);
+    }
   }
 
   private async tillTile(tileX: number, tileY: number): Promise<void> {
@@ -198,6 +235,44 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  async plantSeed(tileX: number, tileY: number, seedCode: string): Promise<void> {
+    try {
+      const response = await gameApi.plant(tileX, tileY, seedCode);
+      const data = response.data;
+
+      if (data.success) {
+        // Add crop to store
+        useGameStore.getState().setCrops([
+          ...useGameStore.getState().crops,
+          {
+            id: String(data.data.crop_id),
+            type: data.data.item_code,
+            position: { x: tileX, y: tileY },
+            growthStage: 0,
+            plantedAt: new Date(data.data.planted_at),
+          },
+        ]);
+
+        // Update inventory (decrease seed)
+        const inventory = useGameStore.getState().inventory;
+        const updatedInventory = inventory.map((item) => {
+          if (item.item_code === seedCode) {
+            return { ...item, quantity: item.quantity - 1 };
+          }
+          return item;
+        }).filter((item) => item.quantity > 0);
+        useGameStore.getState().setInventory(updatedInventory);
+
+        useUiStore.getState().addNotification(data.message, 'success');
+      } else {
+        useUiStore.getState().addNotification(data.message || 'Gagal menanam', 'error');
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Gagal menanam bibit';
+      useUiStore.getState().addNotification(message, 'error');
+    }
+  }
+
   private async loadTilledTiles(): Promise<void> {
     try {
       const response = await gameApi.getTilledTiles();
@@ -206,6 +281,17 @@ export class MainScene extends Phaser.Scene {
       }
     } catch (error) {
       console.error('Failed to load tilled tiles:', error);
+    }
+  }
+
+  private async loadCrops(): Promise<void> {
+    try {
+      const response = await gameApi.getState();
+      if (response.data.success && response.data.data.crops) {
+        useGameStore.getState().setCrops(response.data.data.crops);
+      }
+    } catch (error) {
+      console.error('Failed to load crops:', error);
     }
   }
 
@@ -229,6 +315,30 @@ export class MainScene extends Phaser.Scene {
     }
   }
 
+  private onCropsChanged(crops: { id: string; type: string; position: { x: number; y: number }; growthStage: number }[]): void {
+    // Clear old sprites
+    this.cropSprites.forEach((sprite) => sprite.destroy());
+    this.cropSprites.clear();
+
+    // Render crops based on stage
+    for (const crop of crops) {
+      let textureKey = 'crop_seed';
+      if (crop.growthStage >= 3) textureKey = 'crop_ready';
+      else if (crop.growthStage >= 2) textureKey = 'crop_growing';
+      else if (crop.growthStage >= 1) textureKey = 'crop_sprout';
+
+      const sprite = this.add.image(
+        crop.position.x * TILE_SIZE,
+        crop.position.y * TILE_SIZE,
+        textureKey
+      )
+        .setOrigin(0, 0)
+        .setDepth(1);
+
+      this.cropSprites.set(`crop_${crop.position.x}_${crop.position.y}`, sprite);
+    }
+  }
+
   private renderMap(): void {
     const tileGroup = this.add.group();
     for (let y = 0; y < MAP_ROWS; y++) {
@@ -247,13 +357,20 @@ export class MainScene extends Phaser.Scene {
   private renderCrops(): void {
     const crops = useGameStore.getState().crops;
     for (const crop of crops) {
-      this.add.image(
+      let textureKey = 'crop_seed';
+      if (crop.growthStage >= 3) textureKey = 'crop_ready';
+      else if (crop.growthStage >= 2) textureKey = 'crop_growing';
+      else if (crop.growthStage >= 1) textureKey = 'crop_sprout';
+
+      const sprite = this.add.image(
         crop.position.x * TILE_SIZE,
         crop.position.y * TILE_SIZE,
-        'crop'
+        textureKey
       )
         .setOrigin(0, 0)
         .setDepth(1);
+
+      this.cropSprites.set(`crop_${crop.position.x}_${crop.position.y}`, sprite);
     }
   }
 

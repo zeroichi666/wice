@@ -13,6 +13,10 @@ export const gameApi = {
 
   // Get tilled tiles
   getTilledTiles: () => apiClient.get('/game/tilled'),
+
+  // Plant a seed
+  plant: (tile_x: number, tile_y: number, seed_code: string) =>
+    apiClient.post('/game/plant', { tile_x, tile_y, seed_code }),
 };
 
 export default gameApi;

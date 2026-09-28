@@ -13,6 +13,11 @@ interface UiStore {
   shopTab: 'buy' | 'sell';
   setShopTab: (tab: 'buy' | 'sell') => void;
 
+  isSeedMenuOpen: boolean;
+  setSeedMenuOpen: (open: boolean) => void;
+  seedMenuTile: { x: number; y: number } | null;
+  setSeedMenuTile: (tile: { x: number; y: number } | null) => void;
+
   notifications: Notification[];
   addNotification: (message: string, type: Notification['type']) => void;
   removeNotification: (id: string) => void;
@@ -29,6 +34,11 @@ export const useUiStore = create<UiStore>((set) => ({
 
   shopTab: 'buy',
   setShopTab: (tab) => set({ shopTab: tab }),
+
+  isSeedMenuOpen: false,
+  setSeedMenuOpen: (open) => set({ isSeedMenuOpen: open }),
+  seedMenuTile: null,
+  setSeedMenuTile: (tile) => set({ seedMenuTile: tile }),
 
   notifications: [],
   addNotification: (message, type) => {

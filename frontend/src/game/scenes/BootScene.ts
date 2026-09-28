@@ -95,15 +95,45 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(0, 0, 16, 3);
     g.generateTexture('shop', 16, 16);
 
-    // Crop placeholder (small green sprout)
+    // Crop seed (tiny dot)
+    g.clear();
+    g.fillStyle(0x000000, 0);
+    g.fillRect(0, 0, 16, 16);
+    g.fillStyle(0x8b6914);
+    g.fillRect(7, 12, 2, 2);
+    g.generateTexture('crop_seed', 16, 16);
+
+    // Crop sprout (small green shoot)
     g.clear();
     g.fillStyle(0x000000, 0);
     g.fillRect(0, 0, 16, 16);
     g.fillStyle(0x66bb33);
-    g.fillRect(7, 4, 2, 8);
-    g.fillRect(5, 3, 2, 3);
-    g.fillRect(9, 5, 2, 3);
-    g.generateTexture('crop', 16, 16);
+    g.fillRect(7, 8, 2, 6);
+    g.fillRect(6, 7, 2, 2);
+    g.generateTexture('crop_sprout', 16, 16);
+
+    // Crop growing (medium plant)
+    g.clear();
+    g.fillStyle(0x000000, 0);
+    g.fillRect(0, 0, 16, 16);
+    g.fillStyle(0x4a8c3f);
+    g.fillRect(7, 5, 2, 9);
+    g.fillRect(5, 4, 3, 2);
+    g.fillRect(8, 6, 3, 2);
+    g.generateTexture('crop_growing', 16, 16);
+
+    // Crop ready (full plant)
+    g.clear();
+    g.fillStyle(0x000000, 0);
+    g.fillRect(0, 0, 16, 16);
+    g.fillStyle(0x3d7a2f);
+    g.fillRect(7, 3, 2, 11);
+    g.fillRect(4, 2, 4, 3);
+    g.fillRect(8, 4, 4, 3);
+    g.fillStyle(0x66bb33);
+    g.fillRect(5, 1, 2, 2);
+    g.fillRect(9, 3, 2, 2);
+    g.generateTexture('crop_ready', 16, 16);
 
     g.destroy();
   }
